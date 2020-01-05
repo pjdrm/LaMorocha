@@ -50,6 +50,7 @@ NO_QUIZ = 0
 RESGISTRATION = 1
 ONGOING_QUIZ = 2
 
+
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
@@ -67,7 +68,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
-class LaMorochaBot():
+
+class LaMorochaBot:
     
     def __init__(self, bot_config):
         self.bot_config= bot_config
@@ -302,9 +304,9 @@ class LaMorochaBot():
                 await msg.remove_reaction(payload.emoji.name, member)
                     
         self.bot.run(self.bot_token)
-        
+
+
 if __name__ == "__main__":
-    fetch_raidmons = False
     bot_config_path = "./config/bot_config.json"
     with open(bot_config_path) as data_file:    
         bot_config = json.load(data_file)
