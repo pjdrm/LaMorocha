@@ -44,6 +44,19 @@ def add_video_len(video_search_results):
     return video_dur
 
 
+def filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path):
+    with open(data_file_path, 'r') as f:
+        video_search_results = json.load(f)
+
+    filtered_videos = []
+    for v in video_search_results:
+        dur = v['snippet']['duration']
+        if dur <= max_secs and dur >= min_secs:
+            filtered_videos.append(v)
+
+    save_data(out_dir, out_file_path, filtered_videos)
+
+
 def save_data(out_dir, out_file_path, data):
     with open(out_dir+out_file_path, 'w+') as outfile:
         outfile.write(json.dumps(data, indent=4))
@@ -56,8 +69,15 @@ if __name__ == "__main__":
 
     api_key = bot_config['google_api_key']
     out_dir = '/home/pjdrm/PycharmProjects/LaMorocha/tango_db/'
-    query = "Carlos Di Sarli"
+    query = 'Carlos Di Sarli'
+    '''
     videos = youtube_search(query, api_key, max_results=100)
     videos = add_video_len(videos)
     save_data(out_dir, query, videos)
+    '''
+    min_secs = 120
+    max_secs = 300
+    data_file_path = out_dir+query
+    out_file_path = query+'.fil'
+    filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path)
     print('Done')
