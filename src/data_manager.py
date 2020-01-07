@@ -2,6 +2,7 @@ from apiclient.discovery import build
 import json
 import pafy
 from tqdm import tqdm
+from fuzzywuzzy import fuzz
 
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
@@ -57,11 +58,40 @@ def filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path):
     save_data(out_dir, out_file_path, filtered_videos)
 
 
+def filter_duplicates(data_file_path, max_fuzz_ratio, out_dir, out_file_path):
+    with open(data_file_path, 'r') as f:
+        video_search_results = json.load(f)
+    query =  data_file_path.split('/')[-1].split('.')[0].lower()
+    filtered_videos = []
+    dups = []
+    for i in range(len(video_search_results)):
+        title_i = video_search_results[i]['snippet']['title'].lower().replace(query, '').strip()
+        found_dup = False
+        for j in range(i+1, len(video_search_results)):
+            title_j = video_search_results[j]['snippet']['title'].lower().replace(query, '').strip()
+            fuzz_ratio = fuzz.ratio(title_i, title_j)
+            if fuzz_ratio > max_fuzz_ratio:
+                found_dup = True
+                dups.append([title_i, title_j, fuzz_ratio])
+                break
+        if not found_dup:
+            filtered_videos.append(video_search_results[i])
+
+    save_data(out_dir, out_file_path, filtered_videos)
+    '''
+    for d1, d2 , fuzz_ratio in dups:
+        print('%s\n%s\nfuzz_ratio: %d\n==========' % (d1, d2, fuzz_ratio))
+    print('Total different: %d'%(len(filtered_videos)))
+    '''
+
+
+
 def save_data(out_dir, out_file_path, data):
     with open(out_dir+out_file_path, 'w+') as outfile:
         outfile.write(json.dumps(data, indent=4))
 
 
+MAX_FUZZ_RATIO = 75
 if __name__ == "__main__":
     bot_config_path = "./config/bot_config.json"
     with open(bot_config_path) as data_file:
@@ -79,5 +109,9 @@ if __name__ == "__main__":
     max_secs = 300
     data_file_path = out_dir+query
     out_file_path = query+'.fil'
-    filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path)
+    #filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path)
+
+    data_file_path += '.fil'
+    out_file_path += '.nd'
+    filter_duplicates(data_file_path, MAX_FUZZ_RATIO, out_dir, out_file_path)
     print('Done')
