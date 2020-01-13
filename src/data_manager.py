@@ -3,6 +3,7 @@ import json
 import pafy
 from tqdm import tqdm
 from fuzzywuzzy import fuzz
+import os
 
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
@@ -85,6 +86,21 @@ def filter_duplicates(data_file_path, max_fuzz_ratio, out_dir, out_file_path):
     '''
 
 
+def make_song_db(dir_path, out_dir, out_file_path):
+    db = {}
+    for file_name in os.listdir(dir_path):
+        if file_name.endswith('.nd'):
+            artist = file_name.split('.')[0]
+            db[artist] = []
+            with open(dir_path+file_name, 'r') as f:
+                search_results = json.load(f)
+
+            for sr in search_results:
+                song_name = sr['snippet']['title']
+                url = 'https://www.youtube.com/watch?v='+sr['id']['videoId']
+                db[artist].append({'song_name': song_name, 'url': url})
+    save_data(out_dir, out_file_path, db)
+
 
 def save_data(out_dir, out_file_path, data):
     with open(out_dir+out_file_path, 'w+') as outfile:
@@ -93,25 +109,27 @@ def save_data(out_dir, out_file_path, data):
 
 MAX_FUZZ_RATIO = 75
 if __name__ == "__main__":
+    '''
     bot_config_path = "./config/bot_config.json"
     with open(bot_config_path) as data_file:
         bot_config = json.load(data_file)
 
     api_key = bot_config['google_api_key']
     out_dir = '/home/pjdrm/PycharmProjects/LaMorocha/tango_db/'
-    query = 'Carlos Di Sarli'
-    '''
+    query = 'Francisco Canaro'
     videos = youtube_search(query, api_key, max_results=100)
     videos = add_video_len(videos)
     save_data(out_dir, query, videos)
-    '''
+
     min_secs = 120
     max_secs = 300
     data_file_path = out_dir+query
     out_file_path = query+'.fil'
-    #filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path)
+    filter_duration(data_file_path, min_secs, max_secs, out_dir, out_file_path)
 
     data_file_path += '.fil'
     out_file_path += '.nd'
     filter_duplicates(data_file_path, MAX_FUZZ_RATIO, out_dir, out_file_path)
+    '''
+    make_song_db('/home/pjdrm/PycharmProjects/LaMorocha/tango_db/', '/home/pjdrm/PycharmProjects/LaMorocha/config/', 'music_db_v2.json')
     print('Done')

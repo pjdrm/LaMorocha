@@ -14,7 +14,6 @@ import operator
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
-
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -26,7 +25,7 @@ ytdl_format_options = {
     'quiet': True,
     'no_warnings': True,
     'default_search': 'auto',
-    'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
+    'source_address': '0.0.0.0'  # bind to ipv4 since ipv6 addresses cause issues sometimes
 }
 
 ffmpeg_options = {
@@ -45,7 +44,7 @@ MUSIC_EMOJI = '🎧'
 LOCK_EMOJI = '🔒'
 NEXT_EMOJI = '⏭'
 TADA_EMOJI = '🎉'
-#Game states
+# Game states
 NO_QUIZ = 0
 RESGISTRATION = 1
 ONGOING_QUIZ = 2
@@ -70,24 +69,24 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class LaMorochaBot:
-    
+
     def __init__(self, bot_config):
-        self.bot_config= bot_config
+        self.bot_config = bot_config
         self.bot_token = bot_config["bot_token"]
         self.voice_channel = None
         self.voice_channel_id = bot_config["voice_channel_id"]
-        with open(bot_config["music_db"]) as music_db_file:    
+        with open(bot_config["music_db"]) as music_db_file:
             music_db = json.load(music_db_file)
         self.question_queue = self.generate_questions(music_db)
         self.game_state = NO_QUIZ
-        self.resgistered_users = {}
+        self.registered_users = {}
         self.user_answers = {}
         self.user_scores = {}
         self.max_questions = 2
         self.n_questions = 0
         self.bot = commands.Bot(command_prefix="!", description='LaMorochaBot')
         self.run_discord_bot()
-    
+
     def add_user_answer(self, user, answer_emoji):
         answer_index = -1
         if answer_emoji == ANSWER_A:
@@ -103,7 +102,7 @@ class LaMorochaBot:
             answer_index = 3
             answer_letter = " **(D.)**"
         self.user_answers[user] = {"index": answer_index, "letter": answer_letter}
-        
+
     def generate_questions(self, music_db):
         question_queue = []
         all_authors = list(music_db.keys())
@@ -120,128 +119,132 @@ class LaMorochaBot:
         for i in range(10):
             shuffle(question_queue)
         return question_queue
-        
+
     def change_game_state(self, new_state):
         self.game_state = new_state
-        
-    def create_quiz_registration(self, resgistered_users):
-        instructions = CHECK_EMOJI+"- Inscrever no quiz\n"+\
-                       MUSIC_EMOJI+"- Ligar ao canal #music\n"+\
-                       X_EMOJI+"- Desinscrever do quiz\n"+\
-                       GO_EMOJI+"- Começar o quiz"
+
+    def create_quiz_registration(self, registered_users):
+        instructions = CHECK_EMOJI + "- Inscrever no quiz\n" + \
+                       MUSIC_EMOJI + "- Ligar ao canal #music\n" + \
+                       X_EMOJI + "- Desinscrever do quiz\n" + \
+                       GO_EMOJI + "- Começar o quiz"
         resitration_embed = discord.Embed(title="**Estão abertas as inscrições para o Orquestra Quiz!**")
         resitration_embed.add_field(name="**Instruções**", value=instructions, inline=False)
-        if len(resgistered_users.keys()) > 0:
+        if len(registered_users.keys()) > 0:
             field_str = ""
-            for user in resgistered_users:
-                field_str += resgistered_users[user]["user_name"]
-                if resgistered_users[user]["join_voice_chan"]:
-                    field_str += " "+MUSIC_EMOJI
+            for user in registered_users:
+                field_str += registered_users[user]["user_name"]
+                if registered_users[user]["join_voice_chan"]:
+                    field_str += " " + MUSIC_EMOJI
                 field_str += "\n"
             field_str = field_str[:-1]
             resitration_embed.add_field(name="**Jogadores Inscritos**", value=field_str, inline=False)
         return resitration_embed
-    
+
     def generate_question_embed(self, question_info, user_answers):
         hyps = self.current_question[1]["hyps"]
-        hyps_str = "**A.** "+hyps[0]+"\n"
-        hyps_str += "**B.** "+hyps[1]+"\n"
-        hyps_str += "**C.** "+hyps[2]+"\n"
-        hyps_str += "**D.** "+hyps[3]
-        
+        hyps_str = "**A.** " + hyps[0] + "\n"
+        hyps_str += "**B.** " + hyps[1] + "\n"
+        hyps_str += "**C.** " + hyps[2] + "\n"
+        hyps_str += "**D.** " + hyps[3]
+
         quiz_embed = discord.Embed()
         quiz_embed.add_field(name="**Que orquestra está a tocar?**", value=hyps_str, inline=False)
         if len(user_answers.keys()) > 0:
             user_list = ""
             for user in user_answers:
-                user_list += user.split('#')[0]+" "+LOCK_EMOJI+"\n"
+                user_list += user.split('#')[0] + " " + LOCK_EMOJI + "\n"
             user_list = user_list[:-1]
             quiz_embed.add_field(name="**Respostas Bloqueadas**", value=user_list, inline=False)
-        quiz_embed.set_footer(text="Pergunta "+str(self.n_questions)+"/"+str(self.max_questions))
+        quiz_embed.set_footer(text="Pergunta " + str(self.n_questions) + "/" + str(self.max_questions))
         return quiz_embed
-    
+
     def get_current_ranking(self):
         score_str = ""
         i = 1
-        for user, pts in sorted(self.user_scores.items(), key=operator.itemgetter(1), reverse= True):
-            score_str += "**"+str(i)+".** "+user.split('#')[0]+" ("+str(pts)+" pt)\n"
+        for user, pts in sorted(self.user_scores.items(), key=operator.itemgetter(1), reverse=True):
+            score_str += "**" + str(i) + ".** " + user.split('#')[0] + " (" + str(pts) + " pt)\n"
             i += 1
         score_str = score_str[:-1]
         return score_str
-        
+
     async def next_question(self, quiz_channel, voice_client):
-            self.n_questions += 1
-            print("Sending next question")
-            self.user_answers = {}
-            self.current_question = self.question_queue.pop()
-            print("Current url %s"%self.current_question[1]["url"])
-            quiz_embed = self.generate_question_embed(self.current_question, {})
-            botmsg = await quiz_channel.send(embed=quiz_embed)
-            await botmsg.add_reaction(ANSWER_A)
-            await botmsg.add_reaction(ANSWER_B)
-            await botmsg.add_reaction(ANSWER_C)
-            await botmsg.add_reaction(ANSWER_D)
-            
-            music_url = self.current_question[1]["url"]
-            player = await YTDLSource.from_url(music_url, loop=self.bot.loop)
-            voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
-            
+        self.n_questions += 1
+        print("Sending next question")
+        self.user_answers = {}
+        self.current_question = self.question_queue.pop()
+        print("Current url %s" % self.current_question[1]["url"])
+        quiz_embed = self.generate_question_embed(self.current_question, {})
+        botmsg = await quiz_channel.send(embed=quiz_embed)
+        await botmsg.add_reaction(ANSWER_A)
+        await botmsg.add_reaction(ANSWER_B)
+        await botmsg.add_reaction(ANSWER_C)
+        await botmsg.add_reaction(ANSWER_D)
+
+        music_url = self.current_question[1]["url"]
+        player = await YTDLSource.from_url(music_url, loop=self.bot.loop)
+        voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
+
     async def lock_answer(self, channel, question_msg, user, answer_emoji):
-                self.add_user_answer(user, answer_emoji)
-                updated_embed = self.generate_question_embed(self.current_question, self.user_answers)
-                await question_msg.edit(embed=updated_embed)
-                
+        self.add_user_answer(user, answer_emoji)
+        updated_embed = self.generate_question_embed(self.current_question, self.user_answers)
+        await question_msg.edit(embed=updated_embed)
+
     async def score_question(self, channel, question_msg):
-                updated_embed = self.generate_question_embed(self.current_question, {})
-                corrected_answers = ""
-                correct_author = self.current_question[0]
-                for user in self.user_answers:
-                    answer_i = self.user_answers[user]["index"]
-                    answer_author = self.current_question[1]["hyps"][answer_i]
-                    if answer_author == correct_author:
-                        correction_emoji = CHECK_EMOJI
-                        self.user_scores[user] += 1
-                    else:
-                        correction_emoji = X_EMOJI
-                    corrected_answers += correction_emoji+" "+user.split('#')[0]+self.user_answers[user]["letter"]+"\n"
-                
-                score_str = self.get_current_ranking()
-                corrected_answers = corrected_answers[:-1]
-                updated_embed.add_field(name="**Respostas Bloqueadas**", value=corrected_answers, inline=False)
-                bot_answer = "Orquestra: **"+correct_author+"**\n Nome da música: **"+self.current_question[1]["song_name"]+"**"
-                updated_embed.add_field(name="**Resposta Correcta**", value=bot_answer, inline=False)
-                updated_embed.add_field(name="**Ranking actual**", value=score_str, inline=False)
-                await question_msg.edit(embed=updated_embed)
-                await question_msg.add_reaction(NEXT_EMOJI)
-                
+        updated_embed = self.generate_question_embed(self.current_question, {})
+        corrected_answers = ""
+        correct_author = self.current_question[0]
+        for user in self.user_answers:
+            answer_i = self.user_answers[user]["index"]
+            answer_author = self.current_question[1]["hyps"][answer_i]
+            if answer_author == correct_author:
+                correction_emoji = CHECK_EMOJI
+                self.user_scores[user] += 1
+            else:
+                correction_emoji = X_EMOJI
+            corrected_answers += correction_emoji + " " + user.split('#')[0] + self.user_answers[user]["letter"] + "\n"
+
+        score_str = self.get_current_ranking()
+        corrected_answers = corrected_answers[:-1]
+        updated_embed.add_field(name="**Respostas Bloqueadas**", value=corrected_answers, inline=False)
+        bot_answer = "Orquestra: **" + correct_author + "**\n Nome da música: **" + self.current_question[1][
+            "song_name"] + "**"
+        updated_embed.add_field(name="**Resposta Correcta**", value=bot_answer, inline=False)
+        updated_embed.add_field(name="**Ranking actual**", value=score_str, inline=False)
+        await question_msg.edit(embed=updated_embed)
+        await question_msg.add_reaction(NEXT_EMOJI)
+
     async def end_quiz(self, channel, question_msg):
-                final_ranking = self.get_current_ranking()
-                rank1_user = final_ranking.split("1.**")[1].split(" (")[0] #TODO: deal with ties
-                await channel.send(TADA_EMOJI+"Parabéns "+rank1_user+", és o vencedor deste quiz orquestras!"+TADA_EMOJI)
-                quiz_end_embed = discord.Embed()
-                quiz_end_embed.add_field(name="**Ranking final**", value=final_ranking, inline=False)
-                await channel.send(embed=quiz_end_embed)
-                self.n_questions = 0
-                self.user_scores = {}
-                self.user_answers = {}
-                self.change_game_state(NO_QUIZ)
-    
+        final_ranking = self.get_current_ranking()
+        rank1_user = final_ranking.split("1.**")[1].split(" (")[0]  # TODO: deal with ties
+        await channel.send(
+            TADA_EMOJI + " Parabéns " + rank1_user + ", és o vencedor deste quiz orquestras! " + TADA_EMOJI)
+        quiz_end_embed = discord.Embed()
+        quiz_end_embed.add_field(name="**Ranking final**", value=final_ranking, inline=False)
+        await channel.send(embed=quiz_end_embed)
+        self.n_questions = 0
+        self.user_scores = {}
+        self.user_answers = {}
+        self.registered_users = {}
+        self.change_game_state(NO_QUIZ)
+
     async def register_quiz(self, register_message, user, join_voice_chan):
-                if user not in self.user_scores:
-                    self.user_scores[user] = 0
-                self.resgistered_users[user] = {"user_name":user.split('#')[0], "join_voice_chan": join_voice_chan}
-                register_embed = self.create_quiz_registration(self.resgistered_users)
-                await register_message.edit(embed=register_embed)
-                
+        print('Registering user %s'%(user))
+        if user not in self.user_scores:
+            self.user_scores[user] = 0
+        self.registered_users[user] = {"user_name": user.split('#')[0], "join_voice_chan": join_voice_chan}
+        register_embed = self.create_quiz_registration(self.registered_users)
+        await register_message.edit(embed=register_embed)
+
     async def unregister_quiz(self, register_message, user):
-                if user in self.resgistered_users:
-                    self.resgistered_users.pop(user)
-                    register_embed = self.create_quiz_registration(self.resgistered_users)
-                    await register_message.edit(embed=register_embed)
-                
+        if user in self.registered_users:
+            self.registered_users.pop(user)
+            register_embed = self.create_quiz_registration(self.registered_users)
+            await register_message.edit(embed=register_embed)
+
     async def add_to_voice_chan(self, member):
-            await member.move_to(self.voice_channel)
-                    
+        await member.move_to(self.voice_channel)
+
     def run_discord_bot(self):
         @self.bot.event
         async def on_ready():
@@ -249,15 +252,15 @@ class LaMorochaBot:
             self.voice_channel = self.bot.get_channel(self.voice_channel_id)
             await self.voice_channel.connect()
             print('Connected to voice channel')
-            
+
         @self.bot.command()
         async def stop(ctx):
             """Stops and disconnects the bot from voice"""
             await ctx.voice_client.disconnect()
-        
+
         @self.bot.command(pass_context=True)
-        async def quiz(ctx, total_questions : int = self.max_questions):
-            print("Received quiz command: total_questions %d"%total_questions)
+        async def quiz(ctx, total_questions: int = self.max_questions):
+            print("Received quiz command: total_questions %d" % total_questions)
             if self.game_state == NO_QUIZ:
                 print("Creating quiz registration")
                 self.max_questions = total_questions
@@ -268,7 +271,7 @@ class LaMorochaBot:
                 await botmsg.add_reaction(X_EMOJI)
                 await botmsg.add_reaction(GO_EMOJI)
                 self.change_game_state(RESGISTRATION)
-        
+
         @self.bot.event
         async def on_raw_reaction_add(payload):
             if payload.user_id != self.bot.user.id:
@@ -278,10 +281,10 @@ class LaMorochaBot:
                 user = str(member)
                 if self.game_state == RESGISTRATION:
                     if payload.emoji.name == CHECK_EMOJI:
-                        if user not in self.resgistered_users:
+                        if user not in self.registered_users:
                             await self.register_quiz(msg, user, False)
                     elif payload.emoji.name == MUSIC_EMOJI:
-                        if user not in self.resgistered_users:
+                        if user not in self.registered_users:
                             await self.register_quiz(msg, user, True)
                         await self.add_to_voice_chan(member)
                     elif payload.emoji.name == X_EMOJI:
@@ -294,7 +297,7 @@ class LaMorochaBot:
                         if user not in self.user_answers:
                             print("Got new answer")
                             await self.lock_answer(channel, msg, user, payload.emoji.name)
-                            if len(self.user_answers.keys()) == len(self.resgistered_users.keys()):
+                            if len(self.user_answers.keys()) == len(self.registered_users.keys()):
                                 msg.guild.voice_client.stop()
                                 await self.score_question(channel, msg)
                                 if self.n_questions == self.max_questions:
@@ -302,13 +305,13 @@ class LaMorochaBot:
                     elif payload.emoji.name == NEXT_EMOJI:
                         await self.next_question(channel, msg.guild.voice_client)
                 await msg.remove_reaction(payload.emoji.name, member)
-                    
+
         self.bot.run(self.bot_token)
 
 
 if __name__ == "__main__":
     bot_config_path = "./config/bot_config.json"
-    with open(bot_config_path) as data_file:    
+    with open(bot_config_path) as data_file:
         bot_config = json.load(data_file)
-    
+
     raid_bot = LaMorochaBot(bot_config)
