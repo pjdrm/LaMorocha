@@ -215,10 +215,27 @@ class LaMorochaBot:
         await question_msg.add_reaction(NEXT_EMOJI)
 
     async def end_quiz(self, channel, question_msg):
+        winners = []
+        best_score = -1
+        for user, pts in sorted(self.user_scores.items(), key=operator.itemgetter(1), reverse=True):
+            user = user.split('#')[0]
+            if best_score == -1:
+                winners.append(user)
+                best_score = pts
+            elif pts == best_score:
+                winners.append(user)
+            else:
+                break
+        rank1_user = ''
+        if len(winners) == 1:
+            rank1_user = winners[0]+", és o vencedor deste quiz orquestras! "
+        else:
+            for i in range(len(winners)-1):
+                rank1_user += winners[i]+', '
+            rank1_user += 'e '+winners[-1]+", são os vencedores deste quiz orquestras! "
         final_ranking = self.get_current_ranking()
-        rank1_user = final_ranking.split("1.**")[1].split(" (")[0]  # TODO: deal with ties
         await channel.send(
-            TADA_EMOJI + " Parabéns " + rank1_user + ", és o vencedor deste quiz orquestras! " + TADA_EMOJI)
+            TADA_EMOJI + " Parabéns "+ rank1_user + TADA_EMOJI)
         quiz_end_embed = discord.Embed()
         quiz_end_embed.add_field(name="**Ranking final**", value=final_ranking, inline=False)
         await channel.send(embed=quiz_end_embed)
