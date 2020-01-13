@@ -48,7 +48,8 @@ TADA_EMOJI = '🎉'
 NO_QUIZ = 0
 RESGISTRATION = 1
 ONGOING_QUIZ = 2
-
+VOICE_CHANNEL = None
+VOICE_CLIENT = None
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -73,7 +74,6 @@ class LaMorochaBot:
     def __init__(self, bot_config):
         self.bot_config = bot_config
         self.bot_token = bot_config["bot_token"]
-        self.voice_channel = None
         self.voice_channel_id = bot_config["voice_channel_id"]
         with open(bot_config["music_db"]) as music_db_file:
             music_db = json.load(music_db_file)
@@ -239,6 +239,8 @@ class LaMorochaBot:
         quiz_end_embed = discord.Embed()
         quiz_end_embed.add_field(name="**Ranking final**", value=final_ranking, inline=False)
         await channel.send(embed=quiz_end_embed)
+        global VOICE_CLIENT
+        await VOICE_CLIENT.disconnect()
         self.n_questions = 0
         self.user_scores = {}
         self.user_answers = {}
@@ -260,15 +262,14 @@ class LaMorochaBot:
             await register_message.edit(embed=register_embed)
 
     async def add_to_voice_chan(self, member):
-        await member.move_to(self.voice_channel)
+        await member.move_to(VOICE_CHANNEL)
 
     def run_discord_bot(self):
         @self.bot.event
         async def on_ready():
+            global VOICE_CHANNEL
             print('LaMorochaBot Ready')
-            self.voice_channel = self.bot.get_channel(self.voice_channel_id)
-            await self.voice_channel.connect()
-            print('Connected to voice channel')
+            VOICE_CHANNEL = self.bot.get_channel(self.voice_channel_id)
 
         @self.bot.command()
         async def stop(ctx):
@@ -277,8 +278,10 @@ class LaMorochaBot:
 
         @self.bot.command(pass_context=True)
         async def quiz(ctx, total_questions: int = self.max_questions):
+            global VOICE_CHANNEL, VOICE_CLIENT
             print("Received quiz command: total_questions %d" % total_questions)
             if self.game_state == NO_QUIZ:
+                VOICE_CLIENT = await VOICE_CHANNEL.connect()
                 print("Creating quiz registration")
                 self.max_questions = total_questions
                 reg_embed = self.create_quiz_registration({})
