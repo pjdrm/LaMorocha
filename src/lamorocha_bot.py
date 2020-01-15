@@ -239,6 +239,13 @@ class LaMorochaBot:
         quiz_end_embed = discord.Embed()
         quiz_end_embed.add_field(name="**Ranking final**", value=final_ranking, inline=False)
         await channel.send(embed=quiz_end_embed)
+        await self.reset_quiz_vars()
+
+    async def cancel_quiz(self, channel):
+        await self.reset_quiz_vars()
+        await channel.send('Quiz canceled')
+
+    async def reset_quiz_vars(self):
         global VOICE_CLIENT
         await VOICE_CLIENT.disconnect()
         self.n_questions = 0
@@ -276,6 +283,11 @@ class LaMorochaBot:
             """Stops and disconnects the bot from voice"""
             await ctx.voice_client.disconnect()
 
+        @self.bot.command()
+        async def cancel(ctx):
+            """Cancel current quiz"""
+            await self.cancel_quiz(ctx.message.channel)
+
         @self.bot.command(pass_context=True)
         async def quiz(ctx, total_questions: int = self.max_questions):
             global VOICE_CHANNEL, VOICE_CLIENT
@@ -310,6 +322,8 @@ class LaMorochaBot:
                     elif payload.emoji.name == X_EMOJI:
                         await self.unregister_quiz(msg, user)
                     elif payload.emoji.name == GO_EMOJI:
+                        if user not in self.registered_users:
+                            await self.register_quiz(msg, user, False)
                         self.change_game_state(ONGOING_QUIZ)
                         await self.next_question(channel, msg.guild.voice_client)
                 elif self.game_state == ONGOING_QUIZ:
