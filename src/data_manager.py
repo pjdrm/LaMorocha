@@ -102,6 +102,64 @@ def make_song_db(dir_path, out_dir, out_file_path):
                 db[artist].append({'song_name': song_name, 'url': url})
     save_data(out_dir, out_file_path, db)
 
+def make_orch_check(required_words, song_name_lower, verified_music_db, url, orch, song_name, revised_music_db):
+    has_all_words = True
+    if url not in verified_music_db:
+        verified_music_db[url] = {'queries': []}
+    verified_music_db[url]['queries'].append(orch)
+    for w in required_words:
+        w = w.lower()
+        if w not in song_name_lower:
+            has_all_words = False
+            prompt_str = 'Is *' + song_name + '* from *' + orch + '*?\n'
+            answer = input(prompt_str)
+            while answer != 'y' and answer != 'n':
+                print('Please answer "y" or "n"')
+                answer = input(prompt_str)
+            if answer == 'y':
+                revised_music_db[orch].append({'song_name': song_name, 'url': url})
+            break
+    if has_all_words:
+        revised_music_db[orch].append({'song_name': song_name, 'url': url})
+
+
+def check_orqchestra(music_db_path, verified_music_db_path, orchestra_dict):
+    with open(music_db_path) as f:
+        music_db = json.load(f)
+
+    with open(verified_music_db_path) as f:
+        verified_music_db = json.load(f)
+
+    revised_music_db = {}
+    for orch in music_db:
+        revised_music_db[orch] = []
+        required_words = orchestra_dict[orch]['required_words']
+        for song in music_db[orch]:
+            url = song['url']
+            song_name = song['song_name']
+            song_name_lower = song_name.lower()
+            if url not in verified_music_db:
+                make_orch_check(required_words,
+                                song_name_lower,
+                                verified_music_db,
+                                url,
+                                orch,
+                                song_name,
+                                revised_music_db)
+            elif orch not in verified_music_db[url]['queries']:
+                make_orch_check(required_words,
+                                song_name_lower,
+                                verified_music_db,
+                                url,
+                                orch,
+                                song_name,
+                                revised_music_db)
+            else:
+                revised_music_db[orch].append({'song_name': song_name, 'url': url})
+
+    save_data(os.path.dirname(verified_music_db_path)+'/', os.path.basename(verified_music_db_path), verified_music_db)
+    save_data(os.path.dirname(music_db_path)+'/', os.path.basename(music_db_path), revised_music_db)
+
 
 def save_data(out_dir, out_file_path, data):
     with open(out_dir+out_file_path, 'w+') as outfile:
@@ -109,20 +167,31 @@ def save_data(out_dir, out_file_path, data):
 
 
 MAX_FUZZ_RATIO = 75
-QUERY_YOUTUBE= False
-QUERIES=['Francisco Canaro',
+QUERY_YOUTUBE = False
+QUERIES = ['Francisco Canaro',
          'Carlos Di Sarli',
          'Juan D\'Arienzo',
          'Osvaldo Pugliese',
          'Rodolfo Biagi',
          'Julio de Caro']
+REQ_WORDS={'Francisco Canaro': {'required_words': ['canaro']},
+         'Carlos Di Sarli': {'required_words': ['carlos', 'sarli']},
+         'Juan D\'Arienzo': {'required_words': ['arienzo']},
+         'Osvaldo Pugliese': {'required_words': ['pugliese']},
+         'Rodolfo Biagi': {'required_words': ['biagi']},
+         'Julio de Caro': {'required_words': ['julio', 'caro']}}
+
 if __name__ == "__main__":
-    bot_config_path = "./config/bot_config.json"
+    bot_config_path = './config/bot_config.json'
+    out_dir = '/home/pjdrm/PycharmProjects/LaMorocha/tango_db/'
+    out_song_db = '/home/pjdrm/PycharmProjects/LaMorocha/config/'
+    verified_music_db_path = '/home/pjdrm/PycharmProjects/LaMorocha/tango_db/verified_songs.json'
+    music_db_version = 'music_db_v4.json'
+
     with open(bot_config_path) as data_file:
         bot_config = json.load(data_file)
 
     api_key = bot_config['google_api_key']
-    out_dir = '/home/pjdrm/PycharmProjects/LaMorocha/tango_db/'
     min_secs = 120
     max_secs = 210
     for query in QUERIES:
@@ -138,7 +207,8 @@ if __name__ == "__main__":
         data_file_path += '.fil'
         out_file_path += '.nd'
         filter_duplicates(data_file_path, MAX_FUZZ_RATIO, out_dir, out_file_path)
-    make_song_db('/home/pjdrm/PycharmProjects/LaMorocha/tango_db/',
-                 '/home/pjdrm/PycharmProjects/LaMorocha/config/',
-                 'music_db_v3.json')
+    make_song_db(out_dir,
+                 out_song_db,
+                 music_db_version)
+    check_orqchestra(out_song_db+music_db_version, verified_music_db_path, REQ_WORDS)
     print('Done')
