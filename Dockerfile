@@ -18,7 +18,9 @@ RUN ln -s /usr/bin/python3.7 /usr/bin/python
 # Keep getting certificate errors when Docker Hub is building this image - added -no-check-certificate
 RUN wget --no-check-certificate -O /tmp/get-pip.py http://bootstrap.pypa.io/get-pip.py && python3.7 /tmp/get-pip.py
 
-COPY . .
+COPY ./src ./src
+COPY ./config ./config
+COPY ./requirements.txt .
 
 RUN pip install -r requirements.txt
 
