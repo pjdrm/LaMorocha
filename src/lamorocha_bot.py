@@ -11,6 +11,7 @@ import asyncio
 import json
 import youtube_dl
 import operator
+import sys
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -344,8 +345,14 @@ class LaMorochaBot:
 
 
 if __name__ == "__main__":
-    bot_config_path = "./config/bot_config.json"
-    with open(bot_config_path) as data_file:
-        bot_config = json.load(data_file)
+    if len(sys.argv) == 1:
+        bot_config_path = "./config/bot_config.json"
+        with open(bot_config_path) as data_file:
+            bot_config = json.load(data_file)
+    else:
+        bot_config = {"bot_token": sys.argv[1],
+                      "google_api_key": sys.argv[2],
+                      "voice_channel_id": int(sys.argv[3]),
+                      "music_db": "./config/music_db.json"}
 
-    raid_bot = LaMorochaBot(bot_config)
+    quiz_bot = LaMorochaBot(bot_config)

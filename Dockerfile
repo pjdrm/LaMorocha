@@ -2,9 +2,11 @@ FROM ubuntu:16.04
 
 # More SSL cert problems on automatic build on Docker hub:
 ENV GIT_SSL_NO_VERIFY true
-
 ENV DEBIAN_FRONTEND noninteractive
 ENV APTLIST="git libav-tools libffi-dev libopus-dev libssl-dev python3.7 unzip ffmpeg wget ca-certificates build-essential"
+ENV BOT_TOKEN=""
+ENV GOOGLE_API_KEY=""
+ENV VOICE_CHANNEL_ID=""
 
 RUN apt-get update -y
 RUN apt-get install -y --no-install-recommends software-properties-common
@@ -20,4 +22,4 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "src/lamorocha_bot.py"]
+CMD ["sh", "-c", "python src/lamorocha_bot.py ${BOT_TOKEN} ${GOOGLE_API_KEY} ${VOICE_CHANNEL_ID}"]
